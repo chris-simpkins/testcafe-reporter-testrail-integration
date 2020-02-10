@@ -3,10 +3,6 @@
 
 This is the **testrail-integration** reporter plugin for [TestCafe](http://devexpress.github.io/testcafe).
 
-<p align="center">
-    <img src="https://raw.github.com/chris-simpkins/testcafe-reporter-testrail-integration/master/media/preview.png" alt="preview" />
-</p>
-
 ## Install
 
 ```

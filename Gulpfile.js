@@ -1,23 +1,10 @@
 var gulp    = require('gulp');
-var eslint  = require('gulp-eslint');
 var babel   = require('gulp-babel');
 var mocha   = require('gulp-mocha');
 var del     = require('del');
 
 function clean (cb) {
     del('lib', cb);
-}
-
-function lint () {
-    return gulp
-        .src([
-            'src/**/*.js',
-            'test/**/*.js',
-            'Gulpfile.js'
-        ])
-        .pipe(eslint())
-        .pipe(eslint.format())
-        .pipe(eslint.failAfterError());
 }
 
 function build () {
@@ -53,7 +40,6 @@ function preview () {
 }
 
 exports.clean = clean;
-exports.lint = lint;
-exports.test = gulp.series(clean, lint, build, test);
-exports.build = gulp.series(clean, lint, build);
-exports.preview = gulp.series(clean, lint, build, preview);
+exports.test = gulp.series(clean, build, test);
+exports.build = gulp.series(clean, build);
+exports.preview = gulp.series(clean, build, preview);

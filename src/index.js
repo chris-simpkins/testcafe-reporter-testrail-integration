@@ -1,7 +1,6 @@
 const TestRail = require('./testrail');
 const INVALID_ENV = 'Error:  TESTRAIL_HOST, TESTRAIL_USER, TESTRAIL_PASS and PROJECT_NAME must be set as environment variables for the reporter plugin to push the result to the Testrail';
 require('dotenv').config();
-require('moment');
 
 module.exports = function () {
   return {
@@ -38,7 +37,7 @@ module.exports = function () {
     ConfigID:           [],
 
     async reportTaskStart (startTime, userAgents, testCount) {
-      this.startTime = moment(); // set first test start time
+      this.startTime = new Date(); // set first test start time
 
       this.testCount = testCount;
 
@@ -49,7 +48,7 @@ module.exports = function () {
       //   .write(' |')
       //   .newLine();
       this.agents = userAgents;
-      this.testStartTime = moment();
+      this.testStartTime = new Date();
       this.EnableTestrail = process.env.TESTRAIL_ENABLE === 'true';
       this.PushTestRuns = process.env.PUSH_TEST_RUNS === 'true';
       this.UpdateTestCases = process.env.UPDATE_TEST_CASES === 'true';
@@ -80,13 +79,13 @@ module.exports = function () {
 
     async reportTestDone (name, testRunInfo, meta) {
       const _this = this;
-      this.testEndTime = moment(); // set test end time
+      this.testEndTime = new Date(); // set test end time
       const hasErr = testRunInfo.errs.length;
       const result = hasErr ? this.chalk.red('Failed') : this.chalk.green('Passed');
 
       this.write(result + ' ' + this.currentFixtureName + ' - ' + name).newline();
 
-      this.testStartTime = moment(); // set net test start time
+      this.testStartTime = new Date(); // set net test start time
 
       const testOutput = { meta };
       testOutput[0] = this.currentFixtureName;
@@ -293,8 +292,6 @@ module.exports = function () {
 
     getProject: function getProject (api) {
       const that = this;
-
-      const { name, newline, ProjectID} = this;
 
       api.getProjects(function (err, response, project) {
         if (err !== 'null' && typeof project !== 'undefined') {

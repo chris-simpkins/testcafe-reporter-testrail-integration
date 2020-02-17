@@ -20,61 +20,48 @@ module.exports = function () {
     totalTaskTime:      '',
     errorTestData:      [],
     creationDate:       '',
-    PlanName:           '',
+    planName:           '',
     PlanID:             0,
     SuiteID:            0,
     Sections:           [],
-    EnableTestrail:     false,
-    PushTestRuns:       false,
-    UpdateTestCases:    false,
+    enableTestrail:     false,
+    pushTestRuns:       false,
+    updateTestCases:    false,
     ProjectID:          0,
-    ProjectName:        '',
-    SuiteName:          '',
-    TestrailUser:       null,
-    TestrailPass:       null,
-    TestrailHost:       null,
-    TestcaseType:       null,
+    projectName:        '',
+    suiteName:          '',
+    testrailUser:       null,
+    testrailPass:       null,
+    testrailHost:       null,
+    testcaseType:       null,
     ConfigID:           [],
 
     async reportTaskStart (startTime, userAgents, testCount) {
       this.startTime = new Date(); // set first test start time
 
       this.testCount = testCount;
-
-      // this.setIndent(2)
-      //   .useWordWrap(true)
-      //   .write('| Running tests in: ')
-      //   .write(this.chalk.blue(userAgents))
-      //   .write(' |')
-      //   .newLine();
       this.agents = userAgents;
       this.testStartTime = new Date();
-      this.EnableTestrail = process.env.TESTRAIL_ENABLE === 'true';
-      this.PushTestRuns = process.env.PUSH_TEST_RUNS === 'true';
-      this.UpdateTestCases = process.env.UPDATE_TEST_CASES === 'true';
-      this.ProjectName = process.env.PROJECT_NAME;
-      console.log('Project name:', this.ProjectName)
-      this.SuiteName = process.env.SUITE_NAME;
-      console.log('Suite name:', this.SuiteName)
-      this.TestrailHost = process.env.TESTRAIL_HOST;
-      console.log('Host:', this.TestrailHost)
-      this.TestrailUser = process.env.TESTRAIL_USER;
-      console.log('Username:', this.TestrailUser)
-      this.TestrailPass = process.env.TESTRAIL_PASS;
-      console.log('Password:', this.TestrailPass)
-      this.TestcaseType = process.env.TESTCASE_TYPE;
-      console.log('Testcase type:', this.TestcaseType)
-      if (this.EnableTestrail && (!this.ProjectName || !this.SuiteName || !this.TestrailHost || !this.TestrailPass || !this.TestrailUser)) {
+      this.enableTestrail = process.env.TESTRAIL_ENABLE === 'true';
+      this.pushTestRuns = process.env.PUSH_TEST_RUNS === 'true';
+      this.updateTestCases = process.env.UPDATE_TEST_CASES === 'true';
+      this.projectName = process.env.PROJECT_NAME;
+      this.suiteName = process.env.SUITE_NAME;
+      this.planName = process.env.PLAN_NAME || 'TestAutomation_1';
+      this.testrailHost = process.env.TESTRAIL_HOST;
+      this.testrailUser = process.env.TESTRAIL_USER;
+      this.testrailPass = process.env.TESTRAIL_PASS;
+      this.testcaseType = process.env.TESTCASE_TYPE;
+
+      if (this.enableTestrail && (!this.projectName || !this.suiteName || !this.testrailHost || !this.testrailPass || !this.testrailUser)) {
         this.newline().write(this.chalk.red.bold(INVALID_ENV));
         process.exit(1);
       }
 
-      this.PlanName = process.env.PLAN_NAME || 'TestAutomation_1';
     },
 
     async reportFixtureStart (name) {
       this.currentFixtureName = name;
-      console.log('Current fixture name:', this.currentFixtureName)
     },
 
     async reportTestDone (name, testRunInfo, meta) {
@@ -131,16 +118,13 @@ module.exports = function () {
       const d = new Date();
       this.creationDate = [d.getDate(), d.getMonth() + 1, d.getFullYear(), d.getHours(), d.getMinutes(), d.getSeconds()].join('_');
 
-      this.generateReport();
-
-      if (this.EnableTestrail) {
+      if (this.enableTestrail) {
         this.publishResultToTestrail();
       }
     },
 
     _renderErrors: function _renderErrors (errs) {
       const that = this;
-      this.setIndent(3).newline();
       errs.forEach(function (err, idx) {
         const prefix = that.chalk.red(idx + 1 + ') ');
         that.newline().write(that.formatError(err, prefix)).newline().newline();
@@ -163,15 +147,11 @@ module.exports = function () {
         .write(this.chalk.green('Publishing the result to testrail...'));
 
       for (const testResultItem of this.testResult) {
-        // eslint-disable-next-line
         const testDesc = testResultItem[1].split('\|'); // split the Test Description
         let caseID = null;
         const { refs, steps, test_objective, preconditions } = testResultItem.meta;
-        console.log('testrail meta:', testResultItem.meta)
         const testCase = { section: testDesc[0].trim(), title: testDesc[1].trim(), steps, refs, test_objective, preconditions };
-        console.log('test case:', testCase)
         const testResult = this.assembleTestResult(testResultItem);
-        console.log(testResult)
 
         //this is for test case without case ID
         if (typeof testDesc[2] === 'undefined') {
@@ -197,9 +177,9 @@ module.exports = function () {
       }
 
       const api = new TestRail({
-        host:     this.TestrailHost,
-        user:     this.TestrailUser,
-        password: this.TestrailPass
+        host: this.testrailHost,
+        user: this.testrailUser,
+        password: this.testrailPass
       });
 
       this.getProject(api)
@@ -213,11 +193,9 @@ module.exports = function () {
       } else {
         this.getSections(api);
 
-        if (!this.UpdateTestCases) {
+        if (!this.updateTestCases) {
           this.newline().write(this.chalk.blue.bold('Updating test cases is toggled off'));
         }
-
-        console.log('case list:', caseList)
 
         caseList.forEach(testCase => {
           that.addSectionIfNotExisting(api, testCase.section, function (err1, response1, sectionResult) {
@@ -245,7 +223,7 @@ module.exports = function () {
         });
       }
 
-      if (this.PushTestRuns) {
+      if (this.pushTestRuns) {
         if (caseidList.length === 0 && newCaseIdList.length === 0) {
           this.newline().write(this.chalk.red.bold(this.symbols.err)).write('No test runs data found to publish');
           return;
@@ -272,11 +250,13 @@ module.exports = function () {
 
             result = {
               results: resultsTestcases.concat(resultsNewTestcases)
+              
             };
 
             api.addResultsForCases(runId, result, function (err1, response1, results) {
               if (err1 !== null) {
-                that.newline().write(that.chalk.blue('---------Error at Add result -----')).newline().write(err1);
+                that.newline().write(that.chalk.blue('------------Error at Add result------------')).newline();
+                console.log(err1)
               } else if (results.length === 0) {
                 that.newline().write(that.chalk.red('No Data has been published to Testrail.')).newline();
               } else {
@@ -296,9 +276,9 @@ module.exports = function () {
       api.getProjects(function (err, response, project) {
         if (err !== 'null' && typeof project !== 'undefined') {
           project.forEach(aProject => {
-            if (aProject.name === String(that.ProjectName)) {
+            if (aProject.name === String(that.projectName)) {
               that.ProjectID = aProject.id;
-              that.newline().write(that.chalk.blue.bold('Project name(id) ')).write(that.chalk.yellow(that.ProjectName + '(' + aProject.id + ')'));
+              that.newline().write(that.chalk.blue.bold('Project name(id) ')).write(that.chalk.yellow(that.projectName + '(' + aProject.id + ')'));
             }
           });
         } else {
@@ -315,7 +295,7 @@ module.exports = function () {
         let planId = '';
         if (err !== 'null') {
           for (const index in plans) {
-            if (plans[index].name === that.PlanName) {
+            if (plans[index].name === that.planName) {
               that.newline().write(that.chalk.blue.bold('Plan name(id) ')).write(that.chalk.yellow(plans[index].name + '(' + plans[index].id + ')'));
               planId = plans[index].id;
               break;
@@ -338,7 +318,7 @@ module.exports = function () {
       const that = this;
 
       api.addPlan(this.ProjectID, {
-        name:       this.PlanName,
+        name:       this.planName,
         desription: 'Added From Automation reporter plugin'
       }, function (err, response, plan) {
         if (err !== 'null') {
@@ -362,9 +342,9 @@ module.exports = function () {
 
       return api.getSuites(this.ProjectID, function (err, response, suites) {
         if (err === null) {
-          const existingSuite = suites.filter(suite => suite.name === that.SuiteName)[0];
+          const existingSuite = suites.filter(suite => suite.name === that.suiteName)[0];
           if (typeof existingSuite === 'undefined') {
-            that.newline().write(that.chalk.red('The project doesnt contain suite:')).write(that.SuiteName).newline();
+            that.newline().write(that.chalk.red('The project doesnt contain suite:')).write(that.suiteName).newline();
             that.SuiteID = 0;
           } else {
             const id = existingSuite.id;
@@ -404,7 +384,7 @@ module.exports = function () {
       const that = this;
       const caseData = {
         title:                  testCase.title,
-        type_id:                that.getTestcaseTypeId(api),
+        type_id:                that.gettestcaseTypeId(api),
         priority_id:            api.CONSTANTS.PRIORITY_MEDIUM,
         template_id:            api.CONSTANTS.TEMPLATE_STEPS,
         refs:                   testCase.refs,
@@ -415,7 +395,7 @@ module.exports = function () {
       };
 
       if (typeof testCase.id !== 'undefined') {
-        return this.UpdateTestCases ? api.updateCase(testCase.id, caseData, callback) : callback(null, null, testCase);
+        return this.updateTestCases ? api.updateCase(testCase.id, caseData, callback) : callback(null, null, testCase);
       }
 
       return api.getCases(this.ProjectID, { suite_id: this.SuiteID, section_id: sectionId }, function (err, response, result) {
@@ -427,7 +407,7 @@ module.exports = function () {
           if (typeof existingTestCase === 'undefined') {
             return api.addCase(sectionId, caseData, callback);
           }
-          if (that.UpdateTestCases) {
+          if (that.updateTestCases) {
             return api.updateCase(existingTestCase.id, caseData, callback);
           }
           return callback(null, null, existingTestCase);
@@ -437,10 +417,10 @@ module.exports = function () {
 
     getTestcaseTypeId: function getTestcaseTypeId (api) {
       const defaultTypeId = api.CONSTANTS.TYPE_FUNCTIONAL;
-      if (!this.TestcaseType) {
+      if (!this.testcaseType) {
         return defaultTypeId;
       }
-      const typeId = api.CONSTANTS[`TYPE_${this.TestcaseType.toUpperCase()}`];
+      const typeId = api.CONSTANTS[`TYPE_${this.testcaseType.toUpperCase()}`];
       if (typeof typeId === 'undefined') {
         return defaultTypeId;
       }
@@ -477,10 +457,6 @@ module.exports = function () {
       testResult['status_id'] = _status;
       testResult['comment'] = comment;
       return testResult;
-    },
-
-    generateReport: function generateReport () {
-      console.log('wt it is')
     }
   };
 };

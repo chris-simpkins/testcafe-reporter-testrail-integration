@@ -384,7 +384,7 @@ module.exports = function () {
       const that = this;
       const caseData = {
         title:                  testCase.title,
-        type_id:                that.gettestcaseTypeId(api),
+        type_id:                that.getTestcaseTypeId(api),
         priority_id:            api.CONSTANTS.PRIORITY_MEDIUM,
         template_id:            api.CONSTANTS.TEMPLATE_STEPS,
         refs:                   testCase.refs,

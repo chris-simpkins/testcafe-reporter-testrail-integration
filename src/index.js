@@ -148,9 +148,32 @@ module.exports = function () {
 
       for (const testResultItem of this.testResult) {
         const testDesc = testResultItem[1].split('\|'); // split the Test Description
+        var testCase;
+
         let caseID = null;
-        const { refs, steps, test_objective, preconditions } = testResultItem.meta;
-        const testCase = { section: testDesc[0].trim(), title: testDesc[1].trim(), steps, refs, test_objective, preconditions };
+        const {
+          refs,
+          steps,
+          test_objective,
+          preconditions
+        } = testResultItem.meta;
+        try{
+          testCase = {
+            section: testDesc[0].trim(),
+            title: testDesc[1].trim(),
+            steps,
+            refs,
+            test_objective,
+            preconditions
+          };
+        }catch(err){
+          this
+            .newline()
+            .write('------------------------------------------------------').newline()
+            .write(this.chalk.red.bold(this.symbols.err)).write('  ERROR: Incorrect test case format specified').newline()
+            .write('------------------------------------------------------').newline();
+        }
+
         const testResult = this.assembleTestResult(testResultItem);
 
         //this is for test case without case ID

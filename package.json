@@ -1,6 +1,6 @@
 {
   "name": "testcafe-reporter-testrail-integration",
-  "version": "1.0.5",
+  "version": "1.0.7",
   "description": "testrail-integration TestCafe reporter plugin.",
   "repository": "https://github.com/chris-simpkins/testcafe-reporter-testrail-integration",
   "author": {

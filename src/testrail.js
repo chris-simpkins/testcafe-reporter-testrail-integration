@@ -4,7 +4,7 @@ const request = require('request');
 const qs = require('querystring');
 const Promise = require('bluebird');
 
-function TestRail (options) {
+function TestRail(options) {
   this.host = options.host;
   this.user = options.user;
   this.password = options.password;
@@ -12,23 +12,22 @@ function TestRail (options) {
   this.uri = '/index.php?/api/v2/';
 }
 
-
-/////////////////////// Customise begin//////////////////////////////////
+/// //////////////////// Customise begin//////////////////////////////////
 TestRail.prototype.CONSTANTS = {
-  TYPE_ACCEPTANCE:    1,
+  TYPE_ACCEPTANCE: 1,
   TYPE_ACCESSIBILITY: 2,
-  TYPE_AUTOMATED:     3,
+  TYPE_AUTOMATED: 3,
   TYPE_COMPATIBILITY: 4,
-  TYPE_DESTRUCTIVE:   5,
-  TYPE_FUNCTIONAL:    6,
-  TYPE_OTHER:         7,
-  TYPE_PERFORMANCE:   8,
-  TYPE_REGRESSION:    9,
-  TYPE_SECURITY:      10,
-  TYPE_SMOKE_SANITY:  11,
-  TYPE_USABILITY:     12,
-  PRIORITY_MEDIUM:    2,
-  TEMPLATE_STEPS:     2
+  TYPE_DESTRUCTIVE: 5,
+  TYPE_FUNCTIONAL: 6,
+  TYPE_OTHER: 7,
+  TYPE_PERFORMANCE: 8,
+  TYPE_REGRESSION: 9,
+  TYPE_SECURITY: 10,
+  TYPE_SMOKE_SANITY: 11,
+  TYPE_USABILITY: 12,
+  PRIORITY_MEDIUM: 2,
+  TEMPLATE_STEPS: 2,
 };
 
 TestRail.prototype.updateCaseTypeToAutomatedIfNecessary = function (caseId) {
@@ -44,10 +43,10 @@ TestRail.prototype.updateCaseTypeToAutomatedIfNecessary = function (caseId) {
   });
 };
 
-/////////////////////// Customise end  //////////////////////////////////
+/// //////////////////// Customise end  //////////////////////////////////
 
 TestRail.prototype.apiGet = function (apiMethod, queryVariables, callback) {
-  var url = this.host + this.uri + apiMethod;
+  const url = this.host + this.uri + apiMethod;
 
   if (typeof queryVariables === 'function') {
     callback = queryVariables;
@@ -58,13 +57,12 @@ TestRail.prototype.apiGet = function (apiMethod, queryVariables, callback) {
 };
 
 TestRail.prototype.apiPost = function (apiMethod, body, queryVariables, callback) {
-  var url = this.host + this.uri + apiMethod;
+  const url = this.host + this.uri + apiMethod;
 
   if (typeof body === 'function') {
     callback = body;
     queryVariables = body = null;
-  }
-  else if (typeof queryVariables === 'function') {
+  } else if (typeof queryVariables === 'function') {
     callback = queryVariables;
     queryVariables = null;
   }
@@ -73,36 +71,34 @@ TestRail.prototype.apiPost = function (apiMethod, body, queryVariables, callback
 };
 
 TestRail.prototype._callAPI = function (method, url, queryVariables, body, callback) {
-  if (queryVariables !== null)
-    url += '&' + qs.stringify(queryVariables);
+  if (queryVariables !== null) url += `&${qs.stringify(queryVariables)}`;
 
-
-  var requestArguments = {
-    uri:     url,
+  const requestArguments = {
+    uri: url,
     headers: {
       'content-type': 'application/json',
-      'accept':       'application/json'
+      accept: 'application/json',
     },
-    rejectUnauthorized: false
+    rejectUnauthorized: false,
   };
 
   if (body !== null) {
     requestArguments.body = body;
   }
 
-  var bool = false;
+  let bool = false;
 
   if (typeof callback === 'function') {
-    var data = request[method](requestArguments, function (err, res, respBody) {
+    const data = request[method](requestArguments, (err, res, respBody) => {
       bool = true;
       if (err) {
         return callback(err);
       }
 
-      var responseBody = respBody === '' ? JSON.stringify({}) : respBody;
+      const responseBody = respBody === '' ? JSON.stringify({}) : respBody;
 
       if (res.statusCode !== 200) {
-        var errData = respBody;
+        let errData = respBody;
 
         try {
           errData = JSON.parse(respBody);
@@ -114,61 +110,54 @@ TestRail.prototype._callAPI = function (method, url, queryVariables, body, callb
       return callback(null, res, JSON.parse(responseBody));
     }).auth(this.user, this.password, true);
 
-    require('deasync').loopWhile(function () {
-      return !bool;
-    });
+    require('deasync').loopWhile(() => !bool);
     return data;
   }
-  return new Promise(function (resolve, reject) {
-    return request[method](requestArguments, function (err, res, respBody) {
-      if (err)
-        return reject(err);
+  return new Promise(((resolve, reject) => request[method](requestArguments, (err, res, respBody) => {
+    if (err) return reject(err);
 
-      var responseBody = respBody === '' ? JSON.stringify({}) : respBody;
+    const responseBody = respBody === '' ? JSON.stringify({}) : respBody;
 
-      if (res.statusCode !== 200) {
-        var errData = respBody;
+    if (res.statusCode !== 200) {
+      let errData = respBody;
 
-        try {
-          errData = JSON.parse(respBody);
-        } catch (parseErr) {
-          return callback(parseErr.message || parseErr);
-        }
-        return reject({ message: errData, response: res });
+      try {
+        errData = JSON.parse(respBody);
+      } catch (parseErr) {
+        return callback(parseErr.message || parseErr);
       }
-      return resolve({ response: res, body: JSON.parse(responseBody) });
-    }).auth(this.user, this.password, true);
-  }.bind(this));
-
+      return reject({ message: errData, response: res });
+    }
+    return resolve({ response: res, body: JSON.parse(responseBody) });
+  }).auth(this.user, this.password, true)));
 };
 
 // ----- Cases -----
 
 TestRail.prototype.getCase = function (id, callback) {
-  return this.apiGet('get_case/' + id, callback);
+  return this.apiGet(`get_case/${id}`, callback);
 };
 
 TestRail.prototype.getCases = function (projectId, filters, callback) {
-  var uri = 'get_cases/' + projectId;
+  const uri = `get_cases/${projectId}`;
 
   if (typeof filters === 'function') {
     callback = filters;
     return this.apiGet(uri, callback);
   }
   return this.apiGet(uri, filters, callback);
-
 };
 
 TestRail.prototype.addCase = function (sectionId, data, callback) {
-  return this.apiPost('add_case/' + sectionId, JSON.stringify(data), callback);
+  return this.apiPost(`add_case/${sectionId}`, JSON.stringify(data), callback);
 };
 
 TestRail.prototype.updateCase = function (caseId, data, callback) {
-  return this.apiPost('update_case/' + caseId, JSON.stringify(data), callback);
+  return this.apiPost(`update_case/${caseId}`, JSON.stringify(data), callback);
 };
 
 TestRail.prototype.deleteCase = function (caseId, callback) {
-  return this.apiPost('delete_case/' + caseId, callback);
+  return this.apiPost(`delete_case/${caseId}`, callback);
 };
 
 // ----- Case Fields -----
@@ -186,105 +175,103 @@ TestRail.prototype.getCaseTypes = function (callback) {
 // ----- Configurations -----
 
 TestRail.prototype.getConfigs = function (projectId, callback) {
-  return this.apiGet('get_configs/' + projectId, callback);
+  return this.apiGet(`get_configs/${projectId}`, callback);
 };
 
 TestRail.prototype.addConfigGroup = function (projectId, data, callback) {
-  return this.apiPost('add_config_group/' + projectId, JSON.stringify(data), callback);
+  return this.apiPost(`add_config_group/${projectId}`, JSON.stringify(data), callback);
 };
 
 TestRail.prototype.addConfig = function (configGroupId, data, callback) {
-  return this.apiPost('add_config/' + configGroupId, JSON.stringify(data), callback);
+  return this.apiPost(`add_config/${configGroupId}`, JSON.stringify(data), callback);
 };
 
 TestRail.prototype.updateConfigGroup = function (configGroupId, data, callback) {
-  return this.apiPost('update_config_group/' + configGroupId, JSON.stringify(data), callback);
+  return this.apiPost(`update_config_group/${configGroupId}`, JSON.stringify(data), callback);
 };
 
 TestRail.prototype.updateConfig = function (configId, data, callback) {
-  return this.apiPost('update_config/' + configId, JSON.stringify(data), callback);
+  return this.apiPost(`update_config/${configId}`, JSON.stringify(data), callback);
 };
 
 TestRail.prototype.deleteConfigGroup = function (configGroupId, callback) {
-  return this.apiPost('delete_config_group/' + configGroupId, callback);
+  return this.apiPost(`delete_config_group/${configGroupId}`, callback);
 };
 
 TestRail.prototype.deleteConfig = function (configId, callback) {
-  return this.apiPost('delete_config/' + configId, callback);
+  return this.apiPost(`delete_config/${configId}`, callback);
 };
 
 // ----- Milestones -----
 
 TestRail.prototype.getMilestone = function (id, callback) {
-  return this.apiGet('get_milestone/' + id, callback);
+  return this.apiGet(`get_milestone/${id}`, callback);
 };
 
 TestRail.prototype.getMilestones = function (projectId, filters, callback) {
-  var uri = 'get_milestones/' + projectId;
+  const uri = `get_milestones/${projectId}`;
 
   if (typeof filters === 'function') {
     callback = filters;
     return this.apiGet(uri, callback);
   }
   return this.apiGet(uri, filters, callback);
-
 };
 
 TestRail.prototype.addMilestone = function (projectId, data, callback) {
-  return this.apiPost('add_milestone/' + projectId, JSON.stringify(data), callback);
+  return this.apiPost(`add_milestone/${projectId}`, JSON.stringify(data), callback);
 };
 
 TestRail.prototype.updateMilestone = function (milestoneId, data, callback) {
-  return this.apiPost('update_milestone/' + milestoneId, JSON.stringify(data), callback);
+  return this.apiPost(`update_milestone/${milestoneId}`, JSON.stringify(data), callback);
 };
 
 TestRail.prototype.deleteMilestone = function (milestoneId, callback) {
-  return this.apiPost('delete_milestone/' + milestoneId, callback);
+  return this.apiPost(`delete_milestone/${milestoneId}`, callback);
 };
 
 // ----- Plans -----
 
 TestRail.prototype.getPlan = function (id, callback) {
-  return this.apiGet('get_plan/' + id, callback);
+  return this.apiGet(`get_plan/${id}`, callback);
 };
 
 TestRail.prototype.getPlans = function (projectId, filters, callback) {
-  var uri = 'get_plans/' + projectId;
+  const uri = `get_plans/${projectId}`;
 
   if (typeof filters === 'function') {
     callback = filters;
     return this.apiGet(uri, callback);
   }
   return this.apiGet(uri, filters, callback);
-
 };
 
 TestRail.prototype.addPlan = function (projectId, data, callback) {
-  return this.apiPost('add_plan/' + projectId, JSON.stringify(data), callback);
+  return this.apiPost(`add_plan/${projectId}`, JSON.stringify(data), callback);
 };
 
 TestRail.prototype.addPlanEntry = function (planId, data, callback) {
-  return this.apiPost('add_plan_entry/' + planId, JSON.stringify(data), callback);
+  return this.apiPost(`add_plan_entry/${planId}`, JSON.stringify(data), callback);
 };
 
 TestRail.prototype.updatePlan = function (planId, data, callback) {
-  return this.apiPost('update_plan/' + planId, JSON.stringify(data), callback);
+  return this.apiPost(`update_plan/${planId}`, JSON.stringify(data), callback);
 };
 
 TestRail.prototype.updatePlanEntry = function (planId, entryId, data, callback) {
-  return this.apiPost('update_plan_entry/' + planId + '/' + entryId, JSON.stringify(data), callback);
+  return this.apiPost(`update_plan_entry/${planId}/${entryId}`, JSON.stringify(data), callback);
 };
 
 TestRail.prototype.closePlan = function (planId, callback) {
-  return this.apiPost('close_plan/' + planId, callback);
+  return this.apiPost(`close_plan/${planId}`, callback);
 };
 
 TestRail.prototype.deletePlan = function (planId, callback) {
-  return this.apiPost('delete_plan/' + planId, callback);
+  return this.apiPost(`delete_plan/${planId}`, callback);
 };
 
 TestRail.prototype.deletePlanEntry = function (planId, entryId, callback) {
-  return this.apiPost('delete_plan_entry/' + planId + '/' + entryId, callback);
+  return this.apiPost(`delete_plan_entry/${planId}/${entryId}`, callback);
 };
 
 // ----- Priorities -----
@@ -296,18 +283,17 @@ TestRail.prototype.getPriorities = function (callback) {
 // ----- Projects -----
 
 TestRail.prototype.getProject = function (id, callback) {
-  return this.apiGet('get_project/' + id, callback);
+  return this.apiGet(`get_project/${id}`, callback);
 };
 
 TestRail.prototype.getProjects = function (filters, callback) {
-  var uri = 'get_projects';
+  const uri = 'get_projects';
 
   if (typeof filters === 'function') {
     callback = filters;
     return this.apiGet(uri, callback);
   }
   return this.apiGet(uri, filters, callback);
-
 };
 
 TestRail.prototype.addProject = function (data, callback) {
@@ -315,62 +301,59 @@ TestRail.prototype.addProject = function (data, callback) {
 };
 
 TestRail.prototype.updateProject = function (projectId, data, callback) {
-  return this.apiPost('update_project/' + projectId, JSON.stringify(data), callback);
+  return this.apiPost(`update_project/${projectId}`, JSON.stringify(data), callback);
 };
 
 TestRail.prototype.deleteProject = function (projectId, callback) {
-  return this.apiPost('delete_project/' + projectId, callback);
+  return this.apiPost(`delete_project/${projectId}`, callback);
 };
 
 // ----- Results -----
 
 TestRail.prototype.getResults = function (testId, filters, callback) {
-  var uri = 'get_results/' + testId;
+  const uri = `get_results/${testId}`;
 
   if (typeof filters === 'function') {
     callback = filters;
     return this.apiGet(uri, callback);
   }
   return this.apiGet(uri, filters, callback);
-
 };
 
 TestRail.prototype.getResultsForCase = function (runId, caseId, filters, callback) {
-  var uri = 'get_results_for_case/' + runId + '/' + caseId;
+  const uri = `get_results_for_case/${runId}/${caseId}`;
 
   if (typeof filters === 'function') {
     callback = filters;
     return this.apiGet(uri, callback);
   }
   return this.apiGet(uri, filters, callback);
-
 };
 
 TestRail.prototype.getResultsForRun = function (runId, filters, callback) {
-  var uri = 'get_results_for_run/' + runId;
+  const uri = `get_results_for_run/${runId}`;
 
   if (typeof filters === 'function') {
     callback = filters;
     return this.apiGet(uri, callback);
   }
   return this.apiGet(uri, filters, callback);
-
 };
 
 TestRail.prototype.addResult = function (testId, data, callback) {
-  return this.apiPost('add_result/' + testId, JSON.stringify(data), callback);
+  return this.apiPost(`add_result/${testId}`, JSON.stringify(data), callback);
 };
 
 TestRail.prototype.addResultForCase = function (runId, caseId, data, callback) {
-  return this.apiPost('add_result_for_case/' + runId + '/' + caseId, JSON.stringify(data), callback);
+  return this.apiPost(`add_result_for_case/${runId}/${caseId}`, JSON.stringify(data), callback);
 };
 
 TestRail.prototype.addResults = function (runId, data, callback) {
-  return this.apiPost('add_results/' + runId, JSON.stringify(data), callback);
+  return this.apiPost(`add_results/${runId}`, JSON.stringify(data), callback);
 };
 
 TestRail.prototype.addResultsForCases = function (runId, data, callback) {
-  return this.apiPost('add_results_for_cases/' + runId, JSON.stringify(data), callback);
+  return this.apiPost(`add_results_for_cases/${runId}`, JSON.stringify(data), callback);
 };
 
 // ----- Result Fields -----
@@ -382,62 +365,60 @@ TestRail.prototype.getResultFields = function (callback) {
 // ----- Runs -----
 
 TestRail.prototype.getRun = function (id, callback) {
-  return this.apiGet('get_run/' + id, callback);
+  return this.apiGet(`get_run/${id}`, callback);
 };
 
 TestRail.prototype.getRuns = function (projectId, filters, callback) {
-  var uri = 'get_runs/' + projectId;
+  const uri = `get_runs/${projectId}`;
 
   if (typeof filters === 'function') {
     callback = filters;
     return this.apiGet(uri, callback);
   }
   return this.apiGet(uri, filters, callback);
-
 };
 
 TestRail.prototype.addRun = function (projectId, data, callback) {
-  return this.apiPost('add_run/' + projectId, JSON.stringify(data), callback);
+  return this.apiPost(`add_run/${projectId}`, JSON.stringify(data), callback);
 };
 
 TestRail.prototype.updateRun = function (runId, data, callback) {
-  return this.apiPost('update_run/' + runId, JSON.stringify(data), callback);
+  return this.apiPost(`update_run/${runId}`, JSON.stringify(data), callback);
 };
 
 TestRail.prototype.closeRun = function (runId, callback) {
-  return this.apiPost('close_run/' + runId, callback);
+  return this.apiPost(`close_run/${runId}`, callback);
 };
 
 TestRail.prototype.deleteRun = function (runId, callback) {
-  return this.apiPost('delete_run/' + runId, callback);
+  return this.apiPost(`delete_run/${runId}`, callback);
 };
 
 // ----- Sections -----
 
 TestRail.prototype.getSection = function (id, callback) {
-  return this.apiGet('get_section/' + id, callback);
+  return this.apiGet(`get_section/${id}`, callback);
 };
 
 TestRail.prototype.getSections = function (projectId, filters, callback) {
-  var uri = 'get_sections/' + projectId;
+  const uri = `get_sections/${projectId}`;
   if (typeof filters === 'function') {
     callback = filters;
     return this.apiGet(uri, callback);
   }
   return this.apiGet(uri, filters, callback);
-
 };
 
 TestRail.prototype.addSection = function (projectId, data, callback) {
-  return this.apiPost('add_section/' + projectId, JSON.stringify(data), callback);
+  return this.apiPost(`add_section/${projectId}`, JSON.stringify(data), callback);
 };
 
 TestRail.prototype.updateSection = function (sectionId, data, callback) {
-  return this.apiPost('update_section/' + sectionId, JSON.stringify(data), callback);
+  return this.apiPost(`update_section/${sectionId}`, JSON.stringify(data), callback);
 };
 
 TestRail.prototype.deleteSection = function (sectionId, callback) {
-  return this.apiPost('delete_section/' + sectionId, callback);
+  return this.apiPost(`delete_section/${sectionId}`, callback);
 };
 
 // ----- Statuses -----
@@ -449,39 +430,39 @@ TestRail.prototype.getStatuses = function (callback) {
 // ----- Suites -----
 
 TestRail.prototype.getSuite = function (id, callback) {
-  return this.apiGet('get_suite/' + id, callback);
+  return this.apiGet(`get_suite/${id}`, callback);
 };
 
 TestRail.prototype.getSuites = function (projectId, callback) {
-  return this.apiGet('get_suites/' + projectId, callback);
+  return this.apiGet(`get_suites/${projectId}`, callback);
 };
 
 TestRail.prototype.addSuite = function (projectId, data, callback) {
-  return this.apiPost('add_suite/' + projectId, JSON.stringify(data), callback);
+  return this.apiPost(`add_suite/${projectId}`, JSON.stringify(data), callback);
 };
 
 TestRail.prototype.updateSuite = function (suiteId, data, callback) {
-  return this.apiPost('update_suite/' + suiteId, JSON.stringify(data), callback);
+  return this.apiPost(`update_suite/${suiteId}`, JSON.stringify(data), callback);
 };
 
 TestRail.prototype.deleteSuite = function (suiteId, callback) {
-  return this.apiPost('delete_suite/' + suiteId, callback);
+  return this.apiPost(`delete_suite/${suiteId}`, callback);
 };
 
 // ----- Templates -----
 
 TestRail.prototype.getTemplates = function (projectId, callback) {
-  return this.apiGet('get_templates/' + projectId, callback);
+  return this.apiGet(`get_templates/${projectId}`, callback);
 };
 
 // ----- Tests -----
 
 TestRail.prototype.getTest = function (id, callback) {
-  return this.apiGet('get_test/' + id, callback);
+  return this.apiGet(`get_test/${id}`, callback);
 };
 
 TestRail.prototype.getTests = function (runId, filters, callback) {
-  var uri = 'get_tests/' + runId;
+  const uri = `get_tests/${runId}`;
 
   if (typeof filters === 'function') {
     callback = filters;
@@ -492,11 +473,11 @@ TestRail.prototype.getTests = function (runId, filters, callback) {
 // ----- Users -----
 
 TestRail.prototype.getUser = function (id, callback) {
-  return this.apiGet('get_user/' + id, callback);
+  return this.apiGet(`get_user/${id}`, callback);
 };
 
 TestRail.prototype.getUserByEmail = function (email, callback) {
-  return this.apiGet('get_user_by_email', { email: email }, callback);
+  return this.apiGet('get_user_by_email', { email }, callback);
 };
 
 TestRail.prototype.getUsers = function (callback) {

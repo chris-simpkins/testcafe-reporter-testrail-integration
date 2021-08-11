@@ -10,19 +10,19 @@ npm install testcafe-reporter-testrail-integration
 
 ## Setup
 
-This reporter makes use of [dotenv](https://www.npmjs.com/package/dotenv). To define environment variables, create a file `.env` at the root of your testcafe directory with the following vars:
+This package uses environment variables, make sure required variables are accessible by the process.
 
 ```
-TESTRAIL_ENABLE=true
-PUSH_TEST_RUNS=true
-PLAN_NAME=<plan name>
-TESTRAIL_HOST=<testRail URL>
-TESTRAIL_USER=<testRail email login>
-TESTRAIL_PASS=<testRail password or api auth>
-PROJECT_NAME=<project name>
-SUITE_NAME=<suite name> (default is Master if project contains single suite)
-RUN_NAME=<run name>
-UPDATE_TEST_CASES=<option to update existing test cases>
+TESTRAIL_ENABLE=<bool - optional> [default true]
+PUSH_TEST_RUNS=<bool - optional> [default true]
+PLAN_NAME=<string>
+TESTRAIL_HOST=<string> [format - https://org.testrail.io]
+TESTRAIL_USER=<string>
+TESTRAIL_PASS=<string> [password or api key]
+PROJECT_NAME=<string>
+SUITE_NAME=<string - optional> [default "Master"]
+RUN_NAME=<string - optional> [default "TestAutomation_Plan"]
+UPDATE_TEST_CASES=<bool - optional> [default true]
 ```
 
 For the reporter to be able to update testcases with run results, you must define testcases in the following format:
@@ -65,7 +65,7 @@ testCafe
 
 ## Improvements
 
-Please PR any improvements / fixes. A lot of this code is from another broken + deprecated testRail reporter for TestCafe which I quickly fixed up. A lot of the code needs refactoring / improving, I just had to perform quick fixes and improvements.
+Please PR any improvements / fixes. A lot of this code is from another broken + deprecated testRail reporter for TestCafe which I quickly fixed up.
 
 ## Author
 Chris Simpkins 

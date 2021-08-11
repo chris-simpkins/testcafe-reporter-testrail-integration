@@ -1,53 +1,53 @@
 const TestRail = require('./testrail');
+
 const INVALID_ENV = 'Error:  TESTRAIL_HOST, TESTRAIL_USER, TESTRAIL_PASS and PROJECT_NAME must be set as environment variables for the reporter plugin to push the result to the Testrail';
-require('dotenv').config();
 
 module.exports = function () {
   return {
-    noColors:           false,
-    startTime:          null,
-    afterErrList:       false,
+    noColors: false,
+    startTime: null,
+    afterErrList: false,
     currentFixtureName: null,
-    testCount:          0,
-    skipped:            0,
-    output:             '',
-    testResult:         [],
-    agents:             '',
-    passed:             '',
-    failed:             '',
-    testStartTime:      '',
-    testEndTime:        '',
-    totalTaskTime:      '',
-    errorTestData:      [],
-    creationDate:       '',
-    planName:           '',
-    PlanID:             0,
-    SuiteID:            0,
-    Sections:           [],
-    enableTestrail:     false,
-    pushTestRuns:       false,
-    updateTestCases:    false,
-    ProjectID:          0,
-    projectName:        '',
-    suiteName:          '',
-    testrailUser:       null,
-    testrailPass:       null,
-    testrailHost:       null,
-    testcaseType:       null,
-    ConfigID:           [],
+    testCount: 0,
+    skipped: 0,
+    output: '',
+    testResult: [],
+    agents: '',
+    passed: '',
+    failed: '',
+    testStartTime: '',
+    testEndTime: '',
+    totalTaskTime: '',
+    errorTestData: [],
+    creationDate: '',
+    planName: '',
+    PlanID: 0,
+    SuiteID: 0,
+    Sections: [],
+    enableTestrail: false,
+    pushTestRuns: false,
+    updateTestCases: false,
+    ProjectID: 0,
+    projectName: '',
+    suiteName: '',
+    testrailUser: null,
+    testrailPass: null,
+    testrailHost: null,
+    testcaseType: null,
+    ConfigID: [],
 
-    async reportTaskStart (startTime, userAgents, testCount) {
+    async reportTaskStart(startTime, userAgents, testCount) {
       this.startTime = new Date(); // set first test start time
 
       this.testCount = testCount;
       this.agents = userAgents;
       this.testStartTime = new Date();
-      this.enableTestrail = process.env.TESTRAIL_ENABLE === 'true';
-      this.pushTestRuns = process.env.PUSH_TEST_RUNS === 'true';
-      this.updateTestCases = process.env.UPDATE_TEST_CASES === 'true';
+      this.enableTestrail = process.env.TESTRAIL_ENABLE || 'true';
+      this.pushTestRuns = process.env.PUSH_TEST_RUNS || 'true';
+      this.updateTestCases = process.env.UPDATE_TEST_CASES || 'true';
       this.projectName = process.env.PROJECT_NAME;
-      this.suiteName = process.env.SUITE_NAME;
-      this.planName = process.env.PLAN_NAME || 'TestAutomation_1';
+      this.suiteName = process.env.SUITE_NAME || 'Master';
+      this.planName = process.env.PLAN_NAME || 'TestAutomation_Plan';
       this.testrailHost = process.env.TESTRAIL_HOST;
       this.testrailUser = process.env.TESTRAIL_USER;
       this.testrailPass = process.env.TESTRAIL_PASS;
@@ -57,20 +57,19 @@ module.exports = function () {
         this.newline().write(this.chalk.red.bold(INVALID_ENV));
         process.exit(1);
       }
-
     },
 
-    async reportFixtureStart (name) {
+    async reportFixtureStart(name) {
       this.currentFixtureName = name;
     },
 
-    async reportTestDone (name, testRunInfo, meta) {
+    async reportTestDone(name, testRunInfo, meta) {
       const _this = this;
       this.testEndTime = new Date(); // set test end time
       const hasErr = testRunInfo.errs.length;
       const result = hasErr ? this.chalk.red('Failed') : this.chalk.green('Passed');
 
-      this.write(result + ' ' + this.currentFixtureName + ' - ' + name).newline();
+      this.write(`${result} ${this.currentFixtureName} - ${name}`).newline();
 
       this.testStartTime = new Date(); // set net test start time
 
@@ -92,27 +91,27 @@ module.exports = function () {
         testOutput[4] = '';
         this._renderErrors(testRunInfo.errs);
 
-        testRunInfo.errs.forEach(function (err, idx) {
-          error[2] += _this.formatError(err, idx + 1 + ') ').replace(/(?:\r\n|\r|\n)/g, '<br />').replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
-          testOutput[4] += _this.formatError(err, idx + 1 + ') ').replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
+        testRunInfo.errs.forEach((err, idx) => {
+          error[2] += _this.formatError(err, `${idx + 1}) `).replace(/(?:\r\n|\r|\n)/g, '<br />').replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
+          testOutput[4] += _this.formatError(err, `${idx + 1}) `).replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
         });
         this.errorTestData.push(error);
       }
       this.testResult.push(testOutput);
     },
 
-    async reportTaskDone (endTime, passed) {
+    async reportTaskDone(endTime, passed) {
       this.totalTaskTime = this.moment.duration(endTime - this.startTime).format('h[h] mm[m] ss[s]');
 
       if (this.skipped > 0) {
-        this.write(this.chalk.cyan(this.skipped + ' Skipped')).newline();
+        this.write(this.chalk.cyan(`${this.skipped} Skipped`)).newline();
       }
 
       this.passed = passed;
       this.failed = this.testCount - passed;
 
-      const footer = (passed === this.testCount ? this.testCount + ' Passed' : this.testCount - passed + '/' + this.testCount + ' Failed')
-        + ' (Duration: ' + this.totalTaskTime + ')';
+      const footer = `${passed === this.testCount ? `${this.testCount} Passed` : `${this.testCount - passed}/${this.testCount} Failed`
+      } (Duration: ${this.totalTaskTime})`;
       this.write(footer).newline();
 
       const d = new Date();
@@ -123,15 +122,15 @@ module.exports = function () {
       }
     },
 
-    _renderErrors: function _renderErrors (errs) {
+    _renderErrors: function _renderErrors(errs) {
       const that = this;
-      errs.forEach(function (err, idx) {
-        const prefix = that.chalk.red(idx + 1 + ') ');
+      errs.forEach((err, idx) => {
+        const prefix = that.chalk.red(`${idx + 1}) `);
         that.newline().write(that.formatError(err, prefix)).newline().newline();
       });
     },
 
-    publishResultToTestrail: function publishResultToTestrail () {
+    publishResultToTestrail: function publishResultToTestrail() {
       const that = this;
 
       const resultsTestcases = [];
@@ -155,30 +154,33 @@ module.exports = function () {
           refs,
           steps,
           test_objective,
-          preconditions
+          preconditions,
         } = testResultItem.meta;
-        try{
+        try {
           testCase = {
             section: testDesc[0].trim(),
             title: testDesc[1].trim(),
             steps,
             refs,
             test_objective,
-            preconditions
+            preconditions,
           };
-        }catch(err){
+        } catch (err) {
           this
             .newline()
             .write('------------------------------------------------------').newline()
-            .write(this.chalk.red.bold(this.symbols.err)).write('  ERROR: Incorrect test case format specified').newline()
-            .write('------------------------------------------------------').newline();
+            .write(this.chalk.red.bold(this.symbols.err))
+            .write('  ERROR: Incorrect test case format specified')
+            .newline()
+            .write('------------------------------------------------------')
+            .newline();
         }
 
         const testResult = this.assembleTestResult(testResultItem);
 
-        //this is for test case without case ID
+        // this is for test case without case ID
         if (typeof testDesc[2] === 'undefined') {
-          testResult['case_desc'] = testDesc[0].trim() + ' | ' + testDesc[1].trim();
+          testResult.case_desc = `${testDesc[0].trim()} | ${testDesc[1].trim()}`;
           resultsNewTestcases.push(testResult);
           caseList.push(testCase);
           continue;
@@ -186,14 +188,14 @@ module.exports = function () {
 
         caseID = String(testDesc[2]).toUpperCase().replace('C', ''); // remove the prefix C from CaseID
 
-        //to check that caseID is valid ID using isnumber function
+        // to check that caseID is valid ID using isnumber function
         if (isNaN(caseID)) {
-          this.newline().write(this.chalk.red.bold(this.symbols.err)).write('Warning:  Test: ' + testResultItem[1] + ' contains invalid Test rail Case id');
-            continue;
+          this.newline().write(this.chalk.red.bold(this.symbols.err)).write(`Warning:  Test: ${testResultItem[1]} contains invalid Test rail Case id`);
+          continue;
         }
 
-        testResult['case_id'] = caseID.trim();
-        testCase['id'] = caseID.trim();
+        testResult.case_id = caseID.trim();
+        testCase.id = caseID.trim();
         resultsTestcases.push(testResult);
         caseList.push(testCase);
         caseidList.push(caseID.trim());
@@ -202,10 +204,10 @@ module.exports = function () {
       const api = new TestRail({
         host: this.testrailHost,
         user: this.testrailUser,
-        password: this.testrailPass
+        password: this.testrailPass,
       });
 
-      this.getProject(api)
+      this.getProject(api);
       if (this.ProjectID === 0) return;
 
       this.getSuiteID(api);
@@ -220,25 +222,27 @@ module.exports = function () {
           this.newline().write(this.chalk.blue.bold('Updating test cases is toggled off'));
         }
 
-        caseList.forEach(testCase => {
-          that.addSectionIfNotExisting(api, testCase.section, function (err1, response1, sectionResult) {
+        caseList.forEach((testCase) => {
+          that.addSectionIfNotExisting(api, testCase.section, (err1, response1, sectionResult) => {
             if (err1 !== null) {
-              that.newline().write(that.chalk.blue('---------Error at Add Section -----')).write(testCase.section).newline().write(err1);
+              that.newline().write(that.chalk.blue('---------Error at Add Section -----')).write(testCase.section).newline()
+                .write(err1);
             } else {
               if (!that.Sections.includes(sectionResult)) {
                 that.Sections.push(sectionResult);
               }
-              that.addCaseIfNotExisting(api, sectionResult.id, testCase, function (err2, response2, caseResult) {
-                const caseDesc = sectionResult.name + ' | ' + testCase.title;
+              that.addCaseIfNotExisting(api, sectionResult.id, testCase, (err2, response2, caseResult) => {
+                const caseDesc = `${sectionResult.name} | ${testCase.title}`;
                 if (err2 !== null) {
-                  that.newline().write(that.chalk.blue('---------Error at Add Case -----')).write(caseDesc).newline().write(err2);
+                  that.newline().write(that.chalk.blue('---------Error at Add Case -----')).write(caseDesc).newline()
+                    .write(err2);
                 } else {
                   const caseIdStr = caseResult.id.toString();
                   if (!newCaseIdList.includes(caseIdStr)) {
                     newCaseIdList.push(caseIdStr);
                   }
                   resultsNewTestcases = that.updateResultsWithCaseId(resultsNewTestcases, caseDesc, caseResult.id);
-                  that.newline().write(that.chalk.green.bold(that.symbols.ok)).write(that.chalk.blue('Section | Test case (id)')).write(that.chalk.yellow(caseDesc + '(' + caseResult.id + ')'));
+                  that.newline().write(that.chalk.green.bold(that.symbols.ok)).write(that.chalk.blue('Section | Test case (id)')).write(that.chalk.yellow(`${caseDesc}(${caseResult.id})`));
                 }
               });
             }
@@ -257,33 +261,38 @@ module.exports = function () {
 
         const AgentDetails = this.agents[0].split('/');
         const rundetails = {
-          'suite_id':    this.SuiteID,
-          'include_all': false,
-          'case_ids':    caseidList.concat(newCaseIdList),
-          'name':        'Run_' + this.creationDate + '(' + AgentDetails[0] + '_' + AgentDetails[1] + ')'
+          suite_id: this.SuiteID,
+          include_all: false,
+          case_ids: caseidList.concat(newCaseIdList),
+          name: `Run_${this.creationDate}(${AgentDetails[0]}_${AgentDetails[1]})`,
         };
         let runId = null;
         let result = null;
-        api.addPlanEntry(this.PlanID, rundetails, function (err, response, run) {
+        api.addPlanEntry(this.PlanID, rundetails, (err, response, run) => {
           if (err !== null) {
             that.newline().write(that.chalk.blue('-------------Error at AddPlanEntry ----------------')).newline().write(err);
           } else {
             runId = run.runs[0].id;
-            that.newline().write('------------------------------------------------------').newline().write(that.chalk.green('Run added successfully.')).newline().write(that.chalk.blue.bold('Run name   ')).write(that.chalk.yellow('Run_' + that.creationDate + '(' + AgentDetails[0] + '_' + AgentDetails[1] + ')'));
+            that.newline().write('------------------------------------------------------').newline().write(that.chalk.green('Run added successfully.'))
+              .newline()
+              .write(that.chalk.blue.bold('Run name   '))
+              .write(that.chalk.yellow(`Run_${that.creationDate}(${AgentDetails[0]}_${AgentDetails[1]})`));
 
             result = {
-              results: resultsTestcases.concat(resultsNewTestcases)
-              
+              results: resultsTestcases.concat(resultsNewTestcases),
+
             };
 
-            api.addResultsForCases(runId, result, function (err1, response1, results) {
+            api.addResultsForCases(runId, result, (err1, response1, results) => {
               if (err1 !== null) {
                 that.newline().write(that.chalk.blue('------------Error at Add result------------')).newline();
-                console.log(err1)
+                console.log(err1);
               } else if (results.length === 0) {
                 that.newline().write(that.chalk.red('No Data has been published to Testrail.')).newline();
               } else {
-                that.newline().write('------------------------------------------------------').newline().write(that.chalk.green.bold(that.symbols.ok)).write(that.chalk.green('Result added to the testrail Successfully')).newline();
+                that.newline().write('------------------------------------------------------').newline().write(that.chalk.green.bold(that.symbols.ok))
+                  .write(that.chalk.green('Result added to the testrail Successfully'))
+                  .newline();
               }
             });
           }
@@ -293,15 +302,15 @@ module.exports = function () {
       }
     },
 
-    getProject: function getProject (api) {
+    getProject: function getProject(api) {
       const that = this;
 
-      api.getProjects(function (err, response, project) {
+      api.getProjects((err, response, project) => {
         if (err !== 'null' && typeof project !== 'undefined') {
-          project.forEach(aProject => {
+          project.forEach((aProject) => {
             if (aProject.name === String(that.projectName)) {
               that.ProjectID = aProject.id;
-              that.newline().write(that.chalk.blue.bold('Project name(id) ')).write(that.chalk.yellow(that.projectName + '(' + aProject.id + ')'));
+              that.newline().write(that.chalk.blue.bold('Project name(id) ')).write(that.chalk.yellow(`${that.projectName}(${aProject.id})`));
             }
           });
         } else {
@@ -312,14 +321,14 @@ module.exports = function () {
       });
     },
 
-    getPlanID: function getPlanID (api) {
+    getPlanID: function getPlanID(api) {
       const that = this;
-      api.getPlans(this.ProjectID, function (err, response, plans) {
+      api.getPlans(this.ProjectID, (err, response, plans) => {
         let planId = '';
         if (err !== 'null') {
           for (const index in plans) {
             if (plans[index].name === that.planName) {
-              that.newline().write(that.chalk.blue.bold('Plan name(id) ')).write(that.chalk.yellow(plans[index].name + '(' + plans[index].id + ')'));
+              that.newline().write(that.chalk.blue.bold('Plan name(id) ')).write(that.chalk.yellow(`${plans[index].name}(${plans[index].id})`));
               planId = plans[index].id;
               break;
             }
@@ -337,19 +346,20 @@ module.exports = function () {
       });
     },
 
-    addNewPlan: function addNewPlan (api) {
+    addNewPlan: function addNewPlan(api) {
       const that = this;
 
       api.addPlan(this.ProjectID, {
-        name:       this.planName,
-        desription: 'Added From Automation reporter plugin'
-      }, function (err, response, plan) {
+        name: this.planName,
+        desription: 'Added From Automation reporter plugin',
+      }, (err, response, plan) => {
         if (err !== 'null') {
           if (typeof plan.id === 'undefined') {
             that.newline().write(that.chalk.red('Plan Id found as undefined'));
             that.PlanID = 0;
           } else {
-            that.newline().write(that.chalk.green('New Plan is created')).newline().write(that.chalk.blue.bold('Plan name(id) ')).write(that.chalk.yellow(plan.name + '(' + plan.id + ')'));
+            that.newline().write(that.chalk.green('New Plan is created')).newline().write(that.chalk.blue.bold('Plan name(id) '))
+              .write(that.chalk.yellow(`${plan.name}(${plan.id})`));
             that.PlanID = plan.id;
           }
         } else {
@@ -360,18 +370,18 @@ module.exports = function () {
       });
     },
 
-    getSuiteID: function getSuiteID (api) {
+    getSuiteID: function getSuiteID(api) {
       const that = this;
 
-      return api.getSuites(this.ProjectID, function (err, response, suites) {
+      return api.getSuites(this.ProjectID, (err, response, suites) => {
         if (err === null) {
-          const existingSuite = suites.filter(suite => suite.name === that.suiteName)[0];
+          const existingSuite = suites.filter((suite) => suite.name === that.suiteName)[0];
           if (typeof existingSuite === 'undefined') {
             that.newline().write(that.chalk.red('The project doesnt contain suite:')).write(that.suiteName).newline();
             that.SuiteID = 0;
           } else {
-            const id = existingSuite.id;
-            that.newline().write(that.chalk.blue.bold('Suite name(id) ')).write(that.chalk.yellow(suites[0].name + '(' + id + ')'));
+            const { id } = existingSuite;
+            that.newline().write(that.chalk.blue.bold('Suite name(id) ')).write(that.chalk.yellow(`${suites[0].name}(${id})`));
             that.SuiteID = id;
           }
         } else {
@@ -382,10 +392,10 @@ module.exports = function () {
       });
     },
 
-    getSections: function getSections (api) {
+    getSections: function getSections(api) {
       const that = this;
 
-      return api.getSections(this.ProjectID, { suite_id: this.SuiteID }, function (err, response, sections) {
+      return api.getSections(this.ProjectID, { suite_id: this.SuiteID }, (err, response, sections) => {
         if (err !== null) {
           that.newline().write(that.chalk.blue('---------Error at Get Sections -----')).newline().write(err);
         } else {
@@ -394,8 +404,8 @@ module.exports = function () {
       });
     },
 
-    addSectionIfNotExisting: function addSectionIfNotExisting (api, section, callback) {
-      const existingSection = this.Sections.filter(existing => existing.name === section)[0];
+    addSectionIfNotExisting: function addSectionIfNotExisting(api, section, callback) {
+      const existingSection = this.Sections.filter((existing) => existing.name === section)[0];
 
       if (typeof existingSection === 'undefined') {
         return api.addSection(this.ProjectID, { suite_id: this.SuiteID, name: section }, callback);
@@ -403,30 +413,31 @@ module.exports = function () {
       return callback(null, existingSection, existingSection);
     },
 
-    addCaseIfNotExisting: function addCaseIfNotExisting (api, sectionId, testCase, callback) {
+    addCaseIfNotExisting: function addCaseIfNotExisting(api, sectionId, testCase, callback) {
       const that = this;
       const caseData = {
-        title:                  testCase.title,
-        type_id:                that.getTestcaseTypeId(api),
-        priority_id:            api.CONSTANTS.PRIORITY_MEDIUM,
-        template_id:            api.CONSTANTS.TEMPLATE_STEPS,
-        refs:                   testCase.refs,
+        title: testCase.title,
+        type_id: that.getTestcaseTypeId(api),
+        priority_id: api.CONSTANTS.PRIORITY_MEDIUM,
+        template_id: api.CONSTANTS.TEMPLATE_STEPS,
+        refs: testCase.refs,
         custom_steps_separated: testCase.steps,
-        custom_browser:         testCase.browser,
-        custom_testobjective:   testCase.test_objective,
-        custom_preconds:        testCase.preconditions
+        custom_browser: testCase.browser,
+        custom_testobjective: testCase.test_objective,
+        custom_preconds: testCase.preconditions,
       };
 
       if (typeof testCase.id !== 'undefined') {
         return this.updateTestCases ? api.updateCase(testCase.id, caseData, callback) : callback(null, null, testCase);
       }
 
-      return api.getCases(this.ProjectID, { suite_id: this.SuiteID, section_id: sectionId }, function (err, response, result) {
+      return api.getCases(this.ProjectID, { suite_id: this.SuiteID, section_id: sectionId }, (err, response, result) => {
         if (err !== null) {
           that.newline().write(that.chalk.blue('---------Error at Get Cases -----')).newline().write(err);
         } else {
           const existingTestCase = result.filter(
-            testcase => testcase.title === testCase.title)[0];
+            (testcase) => testcase.title === testCase.title,
+          )[0];
           if (typeof existingTestCase === 'undefined') {
             return api.addCase(sectionId, caseData, callback);
           }
@@ -438,7 +449,7 @@ module.exports = function () {
       });
     },
 
-    getTestcaseTypeId: function getTestcaseTypeId (api) {
+    getTestcaseTypeId: function getTestcaseTypeId(api) {
       const defaultTypeId = api.CONSTANTS.TYPE_FUNCTIONAL;
       if (!this.testcaseType) {
         return defaultTypeId;
@@ -450,36 +461,34 @@ module.exports = function () {
       return typeId;
     },
 
-    updateResultsWithCaseId: function updateResultsWithCaseId (results, caseDesc, caseId) {
-      return results.map(result => {
-        if (result['case_desc'] === caseDesc) {
-          result['case_id'] = caseId;
+    updateResultsWithCaseId: function updateResultsWithCaseId(results, caseDesc, caseId) {
+      return results.map((result) => {
+        if (result.case_desc === caseDesc) {
+          result.case_id = caseId;
         }
         return result;
       });
     },
 
-    assembleTestResult: function assembleTestResult (testResultItem) {
+    assembleTestResult: function assembleTestResult(testResultItem) {
       let _status = testResultItem[2];
       let comment = null;
 
       if (_status === 'Skipped') {
         _status = 6;
         comment = 'Test Skipped';
-      }
-      else if (_status === 'Passed') {
+      } else if (_status === 'Passed') {
         _status = 1;
         comment = 'Test passed';
-      }
-      else {
+      } else {
         _status = 5;
         comment = testResultItem[4]; // if error found for the Test, It will populated in the comment
       }
 
       const testResult = {};
-      testResult['status_id'] = _status;
-      testResult['comment'] = comment;
+      testResult.status_id = _status;
+      testResult.comment = comment;
       return testResult;
-    }
+    },
   };
 };
